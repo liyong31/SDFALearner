@@ -42,71 +42,6 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 		autNonLen = autLen.complement();
 	}
 
-    private boolean isEvenLoop(Word word, int left, int right) {
-    	int max_color = -1;
-        for (int j = left; j <= right; j ++) {
-        	 max_color = Math.max(max_color, word.getLetter(j));
-        }    
-        if ((max_color & 1) == 0) {
-        	return true;
-        }else {
-        	return false;
-        }
-    }
-    
-    class Pair {
-    	int left;
-    	int right;
-    	
-    	Pair(int lft, int rgt) {
-    		this.left = lft;
-    		this.right = rgt;
-    	}
-    	
-    }
-    
-    private HashableValue decideMembership(Word word) {
-    	Pair[] positions = new Pair[numColors];
-    	for (int i = 0; i < numColors; i ++) {
-    		positions[i] = new Pair(-1, -1);
-    	}
-        
-        int mask = 0;
-        for (int i = 0; i < word.length(); i ++) {
-        	int color = word.getLetter(i);
-            Pair pair = positions[color];
-            boolean hasLoop = false;
-            if (pair.left == -1)
-                positions[color].left = i;
-            else if(pair.right == -1) {
-                positions[color].right = i;
-                hasLoop = true;
-            } else {
-                positions[color].left = positions[color].right;
-                positions[color].right = i;
-                hasLoop = true;
-            }
-           
-            boolean isEven = isEvenLoop(word, pair.left, pair.right);
-            System.out.println("lft = " + pair.left + ", rgt=" + pair.right 
-            		+ ", is_even=" + isEven + ", has_loop=" + hasLoop);
-            if (hasLoop && isEven)
-                mask |= 2;
-            else if ( hasLoop && ! isEven)
-                mask |= 1;
-            System.out.println("loop_mask=" + mask);
-            if (mask >= 3)
-                return new HashableValueEnum(0);
-        }
-        
-        if (mask == 2)
-            return new HashableValueEnum(1);
-        else if( mask == 1)
-            return new HashableValueEnum(-1);
-        else
-            return new HashableValueEnum(0);
-    }
-
 	@Override
 	protected HashableValue checkMembership(Query<HashableValue> query) {
 		Word word = query.getQueriedWord();
@@ -114,7 +49,7 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 			return new HashableValueEnum(0);
 		}
 		// then we check whether it is even or odd
-		return decideMembership(word);
+		return UtilSDFA.decideMembership(word, numColors);
 	}
 
 	@Override

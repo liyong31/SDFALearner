@@ -1,10 +1,7 @@
 package main;
 
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 
 import roll.automata.DFA;
@@ -19,23 +16,6 @@ import roll.util.Timer;
 import roll.words.Alphabet;
 
 public class SDFALearner {
-    
-	// this function split the string by space
-	private static ArrayList<String> splitList(String str, int start) {
-		ArrayList<String> words = new ArrayList<String>();
-	    words.ensureCapacity(str.length()/5);
-	    int left = start;
-	    int i;
-	    for (i = start; i < str.length(); i ++) {
-	        if (str.charAt(i) == ' ') {
-	            words.add(str.substring(left, i));
-	            left = i + 1; // if there is another string
-	        }
-	    }
-	    // just before next line
-        words.add(str.substring(left, i));
-	    return words;
-	}
 	
 	public static void main(String[] args) throws IOException {
 		Timer timer = new Timer();
@@ -49,86 +29,28 @@ public class SDFALearner {
 		if (args.length >= 4) {
 			newFormat = true;
 		}
-		long eq = System.currentTimeMillis();
 		Alphabet alphabet = new Alphabet();
 		Options options = new Options();
-		BufferedReader br = new BufferedReader(new FileReader(inputFileName));
 
-		try {
-			timer.start();
-		    String line = br.readLine();
-		    // this is the first line, read the numbers
-		    //String[] splitStr = line.split("\\s+");
-		    ArrayList<String> splitStr = splitList(line, 0);
-//		    ArrayList<String> splitStr = splitList(line);
-		    System.out.println("Start reading samples: " + splitStr.get(0));
-//		    System.out.println(splitStr.get(1));
-		    int numLetters = Integer.parseInt(splitStr.get(1));
-		    for (int i = 0; i < numLetters; i ++) {
-//		    	alphabet.addLetter((char)(48+i));
-		    	// the index is also the character value
-			    alphabet.addLetter((char)i);
-		    }
-		    LinkedList<String> pos = new LinkedList<String>();
-		    LinkedList<String> neg = new LinkedList<String>();
-		    LinkedList<String> don = new LinkedList<String>();
-		    
-		    while ((line = br.readLine()) != null) {
-		       //membership, length, ....
-		    	int blankNr = line.indexOf(' ');
-		    	if (blankNr == -1) {
-		    		// this means the line is empty
-		    		continue;
-		    	}
-		    	int mq = Integer.parseInt(line.substring(0, blankNr));
-		    	if (mq == -1) {
-		    		// ignore all don't care words
-		    		continue;
-		    	}
-		    	// first: length then word
-		    	splitStr = splitList(line, blankNr + 1);
-//		    	splitStr = splitList(line);
-		    	
-		    	int len = -1;
-		    	int start = 1;
-		    	if (newFormat) {
-		    		// we do not have length, then it is word now
-		    		len = splitStr.size();
-		    		start = 0;
-		    	}else {
-		    		len = Integer.parseInt(splitStr.get(0));
-		    	}
-		    	char[] w = new char[len];
-		    	final int end = start + len;
-
-		    	for (int i = start; i < end; i ++) {
-		    		w[i - start] = (char)Integer.parseInt(splitStr.get(i));
-		    	}
-		    	String word = new String(w);
-		        if (mq == 1) {
-//			        System.out.println("pos word: " + word.toString());
-		        	pos.add(word);
-		        }else if (mq == 0){
-		        	neg.add(word);
-//			        System.out.println("neg word: " + word.toString());
-		        }else {
-		        	throw new RuntimeException(
-		        			"Not supposed to see values other than 1, 0 and -1");
-		        }
-		    }
-		    // now learn
-		    System.out.println("Structure: " + structure);
-		    if (structure.equals("table")) {
-		    	options.structure = Options.Structure.TABLE;
-		    }else {
-		    	options.structure = Options.Structure.TREE;
-		    }
-		    eq = System.currentTimeMillis() - eq;
-		    runSDFALearner(options, alphabet, pos, neg, don, outputFileName);
-		    System.out.println("Finished reading file: " + eq/1000.0);
-		} finally {
-		    br.close();
+		timer.start();
+		// now learn
+		LinkedList<String> pos = new LinkedList<String>();
+		LinkedList<String> neg = new LinkedList<String>();
+		LinkedList<String> don = new LinkedList<String>();
+		UtilSDFA.readSampleFile(inputFileName, newFormat, alphabet, pos, neg);
+		timer.stop();
+		long eq = timer.getTimeElapsed();
+		
+		System.out.println("Structure: " + structure);
+		if (structure.equals("table")) {
+			options.structure = Options.Structure.TABLE;
+		} else {
+			options.structure = Options.Structure.TREE;
 		}
+		
+		runSDFALearner(options, alphabet, pos, neg, don, outputFileName);
+		System.out.println("Finished reading file: " + eq / 1000.0);
+		
 		
 	}
 	

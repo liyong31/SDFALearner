@@ -76,6 +76,10 @@ public class SDFALearner {
 		    while ((line = br.readLine()) != null) {
 		       //membership, length, ....
 		    	int blankNr = line.indexOf(' ');
+		    	if (blankNr == -1) {
+		    		// this means the line is empty
+		    		continue;
+		    	}
 		    	int mq = Integer.parseInt(line.substring(0, blankNr));
 		    	if (mq == -1) {
 		    		// ignore all don't care words

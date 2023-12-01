@@ -10,5 +10,15 @@ public class Pair {
 		this.right = rgt;
 	}
 	
+	public Pair copy() {
+		return new Pair(left, right);
+	}
+	
+	@Override
+	public String toString() {
+		return "(" + left + ", " + right + ")";
+	}
+	
+	
 
 }

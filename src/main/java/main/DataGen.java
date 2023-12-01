@@ -1,5 +1,7 @@
 package main;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.LinkedList;
 
@@ -24,7 +26,7 @@ public class DataGen {
 		}
 	}
 	
-	public void generate() {
+	public void generate() throws FileNotFoundException {
 
 		int[] word = new int[length];
 		int[] currColor = new int[length];
@@ -42,7 +44,9 @@ public class DataGen {
 		int numNeg = 0;
 //		positionsStack.addLast(positions);
 		int numSamples = 0;
-		while(currIdx >= 0) {
+    	PrintWriter writer = new PrintWriter("data" + numColors + "-" + length + ".txt");
+    	writer.print(numSamples + " " + numColors + "\n");
+    	while(currIdx >= 0) {
 			// new letter
 			// going forward
 			if (currColor[currIdx] < numColors) {
@@ -85,11 +89,17 @@ public class DataGen {
 //					int[] copy = Arrays.copyOf(word, length);
 					if (masks[currIdx-1] == 2) {
 						numPos ++;
+						writer.print("1");
 //						pos.add(alphabet.getArrayWord(copy));
 					}else if (masks[currIdx-1] == 1){
 						numNeg ++;
 //						neg.add(alphabet.getArrayWord(copy));
+						writer.print("0");
 					}
+					for (int i = 0; i < length; i ++) {
+						writer.print(" " + word[i]);
+					}
+					writer.println();
 					currIdx --;
 					positionsStack.pollLast();
 					currColor[currIdx] ++;
@@ -115,12 +125,23 @@ public class DataGen {
 			// trace backward
 		}
 		
-		for (Word w: pos) {
-			System.out.println("+: " + w.toString());
-		}
-		for (Word w: neg) {
-			System.out.println("-: " + w.toString());
-		}
+		
+//		writer.println();
+//		for (Word w: pos) {
+//			writer.print("1");
+//			for (int letter : w) {
+//				writer.print(" " + letter);
+//			}
+//			writer.println();
+//		}
+//		for (Word w: neg) {
+//			writer.print("0");
+//			for (int letter : w) {
+//				writer.print(" " + letter);
+//			}
+//			writer.println();
+//		}
+		writer.close();
 		System.out.println("#Samples: " + numSamples);
 		System.out.println("#Positives: " + numPos);
 		System.out.println("#Negatives: " + numNeg);
@@ -140,7 +161,7 @@ public class DataGen {
         }
     }
 	
-	private int addLetter(int color, int index, Pair[] positions, int[]word) {
+	private int addLetter(int color, int index, final Pair[] positions, int[]word) {
 		
 		Pair[] currPos = new Pair[this.numColors];
 		for (int i = 0; i < this.numColors; i ++) {
@@ -177,7 +198,7 @@ public class DataGen {
 		return 0;
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws FileNotFoundException {
 		int numColors = 6;
 		int length = 11;
 		

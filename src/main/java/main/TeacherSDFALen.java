@@ -9,7 +9,9 @@ import roll.automata.operations.DFAOperations;
 import roll.main.Options;
 import roll.oracle.TeacherAbstract;
 import roll.query.Query;
+import roll.query.QuerySimple;
 import roll.table.HashableValue;
+import roll.table.HashableValueBoolean;
 import roll.table.HashableValueEnum;
 import roll.words.Alphabet;
 import roll.words.Word;
@@ -20,16 +22,25 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 	private Alphabet alphabet;
 	private Automaton autLen;
 	private Automaton autNonLen;
+	private DataEnumerator de;
+	boolean hasLoop;
+	Automaton dataPos ;
+	Automaton dataNeg ;
+	
+	public int numPos;
+	public int numNeg;
 
-    public TeacherSDFALen(Options options
+    public TeacherSDFALen(Options options, Alphabet alphabet
     		, int numColors, int length) {
 		super(options);
 		this.alphabet = new Alphabet();
 		this.numColors = numColors;
 		this.length = length;
-		for (int i = 0; i < numColors; i ++) {
-			this.alphabet.addLetter((char)i);
-		}
+		this.alphabet = alphabet;
+//		for (int i = 0; i < numColors; i ++) {
+//			this.alphabet.addLetter((char)i);
+//		}
+		autLen = new Automaton();
 		// now add states
 		State curr = new State();
 		autLen.setInitialState(curr);
@@ -40,6 +51,37 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 		}
 		curr.setAccept(true);
 		autNonLen = autLen.complement();
+		dataPos = new Automaton();
+		dataNeg = new Automaton();
+		this.de = new DataEnumerator(numColors, length);
+		final LocalStringUnionOperations builderPos = new LocalStringUnionOperations(); 
+		final LocalStringUnionOperations builderNeg = new LocalStringUnionOperations(); 
+
+		// now build two automata
+		numPos = 0;
+		numNeg = 0;
+		while (de.hasNext()) {
+			de.advance();
+			String sample = de.next();
+//			String sample = gen.next();
+			if (de.isEven()) {
+				builderPos.add(sample);
+				numPos ++;
+			}else {
+				builderNeg.add(sample);
+				numNeg ++;
+			}
+		}
+		System.out.println("#pos: " + numPos + " #neg: " + numNeg);
+		// now construct the automaton
+		dk.brics.automaton.State posInit = LocalStringUnionOperations.build(builderPos);
+		dataPos.setInitialState(posInit);
+				
+		dk.brics.automaton.State negInit = LocalStringUnionOperations.build(builderNeg);
+		dataNeg.setInitialState(negInit);
+				
+		System.out.println("Postive DFA size: " + dataPos.getStates().size());
+		System.out.println("Negative DFA size: " + dataNeg.getStates().size());
 	}
 
 	@Override
@@ -51,6 +93,28 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 		// then we check whether it is even or odd
 		return UtilSDFA.decideMembership(word, numColors);
 	}
+	
+//	private String exaustiveCheck(Automaton dkPos, Automaton dkNeg) {
+//		while (de.hasNext()) {
+//			de.advance();
+//			String sample = de.next();
+////			System.out.println("Sample: " + sample.length() + " Str: "+ sample );
+////			for (int i = 0; i < sample.length(); i ++) {
+////				System.out.println((int)sample.charAt(i));
+////			}
+//			boolean isEven = de.isEven();
+//			boolean acc = dkPos.run(sample);
+////			System.out.println("acc: " + acc);
+//			if (isEven != acc) {
+//				return sample;
+//			}
+//			boolean rej = dkNeg.run(sample);
+//			if ((!isEven) != rej) {
+//				return sample;
+//			}
+//		}
+//		return null;
+//	}
 
 	@Override
 	protected Query<HashableValue> checkEquivalence(SDFA hypothesis) {
@@ -68,9 +132,20 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 		if (cexStr != null) {
 			return UtilSDFA.makeCex(alphabet, cexStr);
 		}
-		Automaton comp = dkPos.complement();
-		comp.intersection(autLen);
-		return null;
+		// hard part
+		Word cex = alphabet.getEmptyWord();
+		Query<HashableValue> ceQuery = null;
+		cexStr = UtilSDFA.checkEquivalence(dataPos, dkPos);
+		if (cexStr != null) {
+			return UtilSDFA.makeCex(alphabet, cexStr);
+		}
+		cexStr = UtilSDFA.checkEquivalence(dataNeg, dkNeg);
+		if (cexStr != null) {
+			return UtilSDFA.makeCex(alphabet, cexStr);
+		}
+    	ceQuery = new QuerySimple<HashableValue>(cex);
+        ceQuery.answerQuery(new HashableValueBoolean(true));
+        return ceQuery;
 	}
 
 }

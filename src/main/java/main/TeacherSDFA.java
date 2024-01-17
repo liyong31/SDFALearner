@@ -92,16 +92,6 @@ public class TeacherSDFA extends TeacherAbstract<SDFA> {
 		return new HashableValueEnum(0);
 	}
 	
-	private String checkEquivalence(Automaton first, Automaton second) {
-		Automaton comp = second.complement();
-		Automaton inter = first.intersection(comp);
-		String cexStr = inter.getShortestExample(true);
-		if (cexStr != null) return cexStr;
-		comp = first.complement();
-		inter = second.intersection(comp);
-		cexStr = inter.getShortestExample(true);
-		return cexStr;
-	}
 
 	@Override
 	protected Query<HashableValue> checkEquivalence(SDFA hypothesis) {
@@ -109,13 +99,13 @@ public class TeacherSDFA extends TeacherAbstract<SDFA> {
 		Query<HashableValue> ceQuery = null;
 		DFA dfa = hypothesis.getDFA(true);
 		Automaton dkDFA = DFAOperations.toDkDFA(dfa);
-		String cexStr = checkEquivalence(posDkDFA, dkDFA);
+		String cexStr = UtilSDFA.checkEquivalence(posDkDFA, dkDFA);
 		if (cexStr != null) {
 			return UtilSDFA.makeCex(alphabet, cexStr);
 		}
 		dfa = hypothesis.getDFA(false);
 		dkDFA = DFAOperations.toDkDFA(dfa);
-		cexStr = checkEquivalence(negDkDFA, dkDFA);
+		cexStr = UtilSDFA.checkEquivalence(negDkDFA, dkDFA);
 		if (cexStr != null) {
 			return UtilSDFA.makeCex(alphabet, cexStr);
 		}

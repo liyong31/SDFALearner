@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import dk.brics.automaton.Automaton;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import roll.automata.SDFA;
@@ -59,6 +60,99 @@ public class UtilSDFA {
         ceQuery.answerQuery(new HashableValueBoolean(false));
         return ceQuery;
 	}
+	
+    public static SDFA reduce(SDFA sdfa) {
+    	SDFA res = new SDFA(sdfa.getAlphabet());
+    	ISet remaining = UtilISet.newISet();
+    	// first, record the transitions that we will keep
+    	ISet careStates = UtilISet.newISet();
+    	for (int s = 0; s < sdfa.getStateSize(); s ++) {
+    		remaining.set(s);
+    		res.createState();
+    		if (sdfa.isFinal(s)) {
+    			res.setFinal(s);
+    			careStates.set(s);
+    		}else if (sdfa.isReject(s)) {
+    			res.setReject(s);
+    			careStates.set(s);
+    		}
+    	}
+    	ISet removed = UtilISet.newISet();
+    	for (int s : careStates) {
+    		for (int c : sdfa.getState(s).getEnabledLetters()) {
+    			int t = sdfa.getSuccessor(s, c);
+    			removed.set(t);
+    		}
+    	}
+    	remaining.andNot(removed);
+    	for (int s = 0; s < sdfa.getStateSize(); s ++) {
+    		if (removed.get(s)) continue;
+    		for (int c : sdfa.getState(s).getEnabledLetters()) {
+    			int t = sdfa.getSuccessor(s, c);
+    			if (removed.get(t)) continue;
+    			res.getState(s).addTransition(c, t);
+    		}
+    	}
+//    	for (String word : positives) {
+//    		int curr = sdfa.getInitialState();
+//    		int index = 0;
+//    		while (index < word.length()) {
+//    			int letter = word.charAt(index);
+//    			int succ = sdfa.getSuccessor(curr, letter);
+//    			res.getState(curr).addTransition(letter, succ);
+//    			curr = succ;
+//    			remaining.set(curr);
+//    			++ index;
+//    		}
+//    	}
+//    	
+//    	for (String word : negatives) {
+//    		int curr = sdfa.getInitialState();
+//    		int index = 0;
+//    		while (index < word.length()) {
+//    			int letter = word.charAt(index);
+//    			int succ = sdfa.getSuccessor(curr, letter);
+//    			res.getState(curr).addTransition(letter, succ);
+//    			curr = succ;
+//    			remaining.set(curr);
+//    			++ index;
+//    		}
+//    	}
+    	res.setInitial(sdfa.getInitialState());
+//		System.out.println("Reduced 1:\n" + res.toString());
+    	final int numRemaining = remaining.cardinality();
+    	// now we remove all unreachable states
+    	// and compute their corresponding indices
+    	int index = 0;
+    	TIntIntMap map = new TIntIntHashMap();
+
+    	for (int s : remaining) {
+    		map.put(s, index ++ );
+//    		System.out.println(s + " -> " + map.get(s));
+    	}
+    	
+    	SDFA copy = new SDFA(sdfa.getAlphabet());
+    	for (int s = 0; s < numRemaining; s ++) {
+    		copy.createState();
+    	}
+    	copy.setInitial(map.get(res.getInitialState()));
+    	for (int s = 0; s < res.getStateSize(); s ++) {
+    		int curr = map.get(s);
+    		if (res.isFinal(s)) {
+    			copy.setFinal(curr);
+    		}else if (res.isReject(s)) {
+    			copy.setReject(curr);
+    		}
+    		// now transitions
+    		StateNFA currState = res.getState(s);
+    		for (int letter : currState.getEnabledLetters()) {
+    			int t = currState.getSuccessor(letter);
+    			copy.getState(curr).addTransition(letter, map.get(t));
+    		}
+    	}
+		System.out.println("Reduced 2:\n" + copy.toString());
+    	return copy;
+    }
 	
     public static SDFA reduce(SDFA sdfa, LinkedList<String> positives
     		, LinkedList<String> negatives) {
@@ -289,13 +383,13 @@ public class UtilSDFA {
             }
            
             boolean isEven = isEvenLoop(word, pair.left, pair.right);
-            System.out.println("lft = " + pair.left + ", rgt=" + pair.right 
-            		+ ", is_even=" + isEven + ", has_loop=" + hasLoop);
+//            System.out.println("lft = " + pair.left + ", rgt=" + pair.right 
+//            		+ ", is_even=" + isEven + ", has_loop=" + hasLoop);
             if (hasLoop && isEven)
                 mask |= 2;
             else if ( hasLoop && ! isEven)
                 mask |= 1;
-            System.out.println("loop_mask=" + mask);
+//            System.out.println("loop_mask=" + mask);
             if (mask >= 3)
                 return new HashableValueEnum(0);
         }
@@ -307,5 +401,16 @@ public class UtilSDFA {
         else
             return new HashableValueEnum(0);
     }
+    
+	public static String checkEquivalence(Automaton first, Automaton second) {
+		Automaton comp = second.complement();
+		Automaton inter = first.intersection(comp);
+		String cexStr = inter.getShortestExample(true);
+		if (cexStr != null) return cexStr;
+		comp = first.complement();
+		inter = second.intersection(comp);
+		cexStr = inter.getShortestExample(true);
+		return cexStr;
+	}
 
 }

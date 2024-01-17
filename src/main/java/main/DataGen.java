@@ -147,6 +147,7 @@ public class DataGen {
 		System.out.println("#Negatives: " + numNeg);
 		
 	}
+	
 
 	
     public boolean isEvenLoop(int[] word, int left, int right) {
@@ -199,7 +200,7 @@ public class DataGen {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException {
-		int numColors = 6;
+		int numColors = 5;
 		int length = 11;
 		
 		Timer timer = new Timer();

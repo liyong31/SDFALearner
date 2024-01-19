@@ -365,7 +365,7 @@ public class UtilSDFA {
     	for (int i = 0; i < numColors; i ++) {
     		positions[i] = new Pair(-1, -1);
     	}
-        
+       
         int mask = 0;
         for (int i = 0; i < word.length(); i ++) {
         	int color = word.getLetter(i);

@@ -88,29 +88,29 @@ public class SDFALearner2 {
 				// test for correctness
 				// this only says they are included there, but did not say anything about
 				// 
-				DataEnumerator de = new DataEnumerator(numColors, length);
-				boolean isCorrect = true;
-				while(de.hasNext()) {
-					de.advance();
-					int[] wordArr = de.nextArray();
-					Word word = alphabet.getArrayWord(wordArr);
-					boolean isEven = de.isEven();
-					int state = reduced.getSuccessor(word);
-					if (isEven != reduced.isFinal(state)) {
-						isCorrect = false;
-						break;
-					}
-					if ((!isEven) != reduced.isReject(state)) {
-						isCorrect = false;
-						break;
-					}
-				}
+//				DataEnumerator de = new DataEnumerator(numColors, length);
+//				boolean isCorrect = true;
+//				while(de.hasNext()) {
+//					de.advance();
+//					int[] wordArr = de.nextArray();
+//					Word word = alphabet.getArrayWord(wordArr);
+//					boolean isEven = de.isEven();
+//					int state = reduced.getSuccessor(word);
+//					if (isEven != reduced.isFinal(state)) {
+//						isCorrect = false;
+//						break;
+//					}
+//					if ((!isEven) != reduced.isReject(state)) {
+//						isCorrect = false;
+//						break;
+//					}
+//				}
 //				System.out.println("Reduced:\n" + reduced.toString());
 		        System.out.println("Output dfa");
 		        UtilSDFA.outputSDFA(reduced, fileName);
-		        if (!isCorrect) {
-		        	System.out.println("Wrong SDFA");
-		        }
+//		        if (!isCorrect) {
+//		        	System.out.println("Wrong SDFA");
+//		        }
 		        System.out.println("Final states: " + reduced.getFinalSize());
 		        System.out.println("Reject states: " + reduced.getRejectSize());
 				break;
@@ -124,10 +124,11 @@ public class SDFALearner2 {
 				model = (SDFA)learner.getHypothesis();
 			}
 		}
-		
+		System.out.println("#Pos: " + teacher.numPos + " #Neg: " + teacher.numNeg);
+		System.out.println("#PosDFA: " + teacher.dataPos.getStates().size() + " #NegDFA: " + teacher.dataNeg.getStates().size());
+
 		System.out.println("Finished learning: " + (System.currentTimeMillis() - time)/1000.0);
 	}
 
 
 }
-

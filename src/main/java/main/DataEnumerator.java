@@ -1,18 +1,17 @@
 package main;
 
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.Arrays;
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 
 import dk.brics.automaton.Automaton;
-import dk.brics.automaton.StringUnionOperations;
-import main.LocalStringUnionOperations.State;
+import roll.automata.DFA;
+import roll.automata.SDFA;
+import roll.automata.operations.DFAOperations;
 import roll.util.Timer;
 import roll.words.Alphabet;
-import roll.words.Word;
 
+// the last word will repeat once, not sure why
 public class DataEnumerator {
 	
 	int numColors;
@@ -29,8 +28,11 @@ public class DataEnumerator {
 	
 	boolean isEven;
 	String result = null;
-	int numPos;
-	int numNeg;
+	long numPos;
+	long numNeg;
+	
+	public static int EVEN = 2;
+	public static int ODD = 1;
 	
 	public DataEnumerator(int numColors, int length) {
 		this.numColors = numColors;
@@ -43,7 +45,7 @@ public class DataEnumerator {
 		
 		// initialisation
 		currColor = new int[length];
-		Arrays.fill(currColor, (char)0);
+		Arrays.fill(currColor, 0);
 		// if there are both even and odd loops, we do not 
 		// need to generate the word
 		masks = new int[length];
@@ -59,10 +61,18 @@ public class DataEnumerator {
 	}
 	
 	public boolean hasNext() {
-		return currIdx >= 0;
+		// check current color
+		boolean isLast = true;
+		int maxColor = numColors - 1;
+		for (int i = 0; i < length; i ++) {
+			// strict less than
+			if (word[i] < maxColor) {
+				isLast = false;
+				break;
+			}
+		}
+		return !isLast;
 	}
-	
-	
 	
 	public void advance() {
 		
@@ -101,23 +111,22 @@ public class DataEnumerator {
 	
 				// if we only have odd/even loops so far,
 				// explore forward
-				currIdx++;
-				if (currIdx == length) {
+				if (currIdx == length - 1) {
 					// we already finished one word
 					//					System.out.println("mask: " + currMask);
 					//					System.out.println("size: " + positionsStack.size());
 					//					System.out.println("word: " + alphabet.getArrayWord(word).toString());
 					//					int[] copy = Arrays.copyOf(word, length);
-					if (masks[currIdx-1] == 2) {
+					if (masks[currIdx] == 2) {
 						isEven = true;
-					}else if (masks[currIdx-1] == 1){
+					}else if (masks[currIdx] == 1){
 						isEven = false;
 					}
-					currIdx--;
 					positionsStack.pollLast();
 					currColor[currIdx]++;
 					break;
 				} else {
+					currIdx ++;
 					// we still need to explore further
 					currColor[currIdx] = 0;
 				}
@@ -134,6 +143,8 @@ public class DataEnumerator {
 					// need to clean positions for current index
 					positionsStack.pollLast();
 				}else {
+					// we should get out of the loop now
+					// all words have been generated
 					break;
 				}
 			}
@@ -217,38 +228,52 @@ public class DataEnumerator {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException {
-		int numColors = 3;
-		int length = 4;
+		int numColors = 5;
+		int length = 11;
 		
 		Timer timer = new Timer();
 		DataEnumerator gen = new DataEnumerator(numColors, length);
 		timer.start();
-		int num = 0;
-		Automaton pos = new Automaton();
-		Automaton neg = new Automaton();
-		final LocalStringUnionOperations builderPos = new LocalStringUnionOperations(); 
-		final LocalStringUnionOperations builderNeg = new LocalStringUnionOperations(); 
-
+		long num = 0;
+//		final LocalStringUnionOperations builderPos = new LocalStringUnionOperations(); 
+//		final LocalStringUnionOperations builderNeg = new LocalStringUnionOperations(); 
+		final WordUnionOperations builder = new WordUnionOperations();
 		while(gen.hasNext()) {
 			gen.advance();
 			num ++;
 			String sample = gen.next();
 			if (gen.isEven()) {
-				builderPos.add(sample);
+//				builderPos.add(sample);
+				builder.add(sample, WordType.ACCEPT);
 			}else {
-				builderNeg.add(sample);
+//				builderNeg.add(sample);
+				builder.add(sample, WordType.REJECT);
 			}
 		}
 		// now construct the automaton
-		dk.brics.automaton.State posInit = LocalStringUnionOperations.build(builderPos);
-		pos.setInitialState(posInit);
+//		dk.brics.automaton.State posInit = LocalStringUnionOperations.build(builderPos);
+//		pos.setInitialState(posInit);
 		
-		dk.brics.automaton.State negInit = LocalStringUnionOperations.build(builderNeg);
-		neg.setInitialState(negInit);
 		
-		System.out.println(pos.getStates().size());
-		System.out.println(neg.getStates().size());
+//		dk.brics.automaton.State negInit = LocalStringUnionOperations.build(builderNeg);
+//		neg.setInitialState(negInit);
 		
+		SDFA sdfa = WordUnionOperations.build(builder, numColors);
+		
+//		System.out.println(pos.getStates().size());
+//		System.out.println(neg.getStates().size());
+		
+		Alphabet alphabet = new Alphabet();
+		for (int i = 0; i < numColors; i ++) {
+			alphabet.addLetter((char)i);
+		}
+//		DFA dfa = DFAOperations.fromDkDFA(alphabet, neg);
+//		System.out.println("Negatives:\n" + dfa.toString());
+		
+//		dfa = DFAOperations.fromDkDFA(alphabet, pos);
+//		System.out.println("Positives:\n" + dfa.toString());
+		
+		System.out.println("SDFA:\n" + sdfa.toString());
 		
 		timer.stop();
 		System.out.println("#Time: " + (timer.getTimeElapsed()/1000.0) + " #samples = " + num);

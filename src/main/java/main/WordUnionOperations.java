@@ -5,18 +5,22 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 
-import dk.brics.automaton.*;
+import roll.automata.SDFA;
+import roll.automata.StateNFA;
+import roll.words.Alphabet;
 
 /**
  * Operations for building minimal deterministic automata from sets of strings. 
  * The algorithm requires sorted input data, but is very fast (nearly linear with the input size).
  * 
  * @author Dawid Weiss
+ * 
+ * @author Yong Li, added a simple extension to support dont-care and rejecting words
  */
 // This is part of dk.brics.automaton library
 // I modified this to make convert public
 // And changed the class name
-final public class LocalStringUnionOperations {
+final public class WordUnionOperations {
 
 	/**
 	 * Lexicographic order of input sequences.
@@ -60,11 +64,7 @@ final public class LocalStringUnionOperations {
 		 */
 		State[] states = NO_STATES;
 
-		/**
-		 * <code>true</code> if this state corresponds to the end of at least one
-		 * input sequence.
-		 */
-		boolean is_final;
+		WordType type = WordType.DONTCARE;
 
 		/**
 		 * Returns the target state of a transition leaving this state and labeled
@@ -105,7 +105,7 @@ final public class LocalStringUnionOperations {
 		@Override
 		public boolean equals(Object obj) {
 			final State other = (State) obj;
-			return is_final == other.is_final
+			return type == other.type
 			&& Arrays.equals(this.labels, other.labels)
 			&& referenceEquals(this.states, other.states);
 		}
@@ -119,18 +119,18 @@ final public class LocalStringUnionOperations {
 		}
 
 		/**
-		 * Is this state a final state in the automaton?
+		 * Is this state a final/reject/dontcare state in the automaton?
 		 */
-		public boolean isFinal() {
-			return is_final;
+		public WordType getType() {
+			return type;
 		}
-
+		
 		/**
 		 * Compute the hash code of the <i>current</i> status of this state.
 		 */
 		@Override
 		public int hashCode() {
-			int hash = is_final ? 1 : 0;
+			int hash = type.hashCode();
 
 			hash ^= hash * 31 + this.labels.length;
 			for (char c : this.labels)
@@ -249,7 +249,7 @@ final public class LocalStringUnionOperations {
 	 * lexicographically larger or equal compared to any previous sequences
 	 * added to this automaton (the input must be sorted).
 	 */
-	public void add(CharSequence current) {
+	public void add(CharSequence current, WordType type) {
 		assert register != null : "Automaton already built.";
 		assert current.length() > 0 : "Input sequences must not be empty.";
 		assert previous == null || LEXICOGRAPHIC_ORDER.compare(previous, current) <= 0 : 
@@ -267,7 +267,7 @@ final public class LocalStringUnionOperations {
 		if (state.hasChildren())
 			replaceOrRegister(state);
 
-		addSuffix(state, current, pos);
+		addSuffix(state, current, pos, type);
 	}
 
 	/**
@@ -286,44 +286,64 @@ final public class LocalStringUnionOperations {
 		register = null;
 		return root;
 	}
+	
+	private static void setType(SDFA sdfa, State s, StateNFA t) {
+		if (s.type == WordType.ACCEPT) {
+			sdfa.setFinal(t.getId());
+		}else if (s.type == WordType.REJECT) {
+			sdfa.setReject(t.getId());
+		}
+	}
 
 	/**
 	 * Internal recursive traversal for conversion.
 	 */
-	public static dk.brics.automaton.State convert(State s, 
-			IdentityHashMap<State, dk.brics.automaton.State> visited) {
-		dk.brics.automaton.State converted = visited.get(s);
-		if (converted != null)
-			return converted;
+	public static StateNFA convert(State s, SDFA converted, IdentityHashMap<State, StateNFA> visited) {
+		StateNFA curr = visited.get(s);
+		if (curr != null)
+			return curr;
+		curr = converted.createState();
+		setType(converted, s, curr);
 
-		converted = new dk.brics.automaton.State();
-		converted.setAccept(s.is_final);
-
-		visited.put(s, converted);
+		visited.put(s, curr);
 		int i = 0;
 		char [] labels = s.labels;
-		for (LocalStringUnionOperations.State target : s.states) {
-			converted.addTransition(new Transition(labels[i++], convert(target, visited)));
+		for (WordUnionOperations.State target : s.states) {
+			StateNFA succ = convert(target, converted, visited);
+			curr.addTransition(labels[i++], succ.getId());
 		}
 
-		return converted;
+		return curr;
 	}
 	
-	public static dk.brics.automaton.State build(LocalStringUnionOperations builder) {
-		return convert(builder.complete(), new IdentityHashMap<State, dk.brics.automaton.State>());
+	public static SDFA build(WordUnionOperations builder, int numLetters) {
+		IdentityHashMap<State, StateNFA> visited = new IdentityHashMap<State, StateNFA>();
+		Alphabet alphabet = new Alphabet();
+		for (int c = 0; c < numLetters; c ++) {
+			alphabet.addLetter((char)c);
+		}
+		SDFA converted = new SDFA(alphabet);
+//		StateNFA init = converted.createState();
+//		setType(converted, s, init);
+//		converted.setInitial(init);
+		StateNFA init = convert(builder.complete(), converted, visited);
+		converted.setInitial(init);
+		return converted;
 	}
 
-	/**
-	 * Build a minimal, deterministic automaton from a sorted list of strings.
-	 */
-	public static dk.brics.automaton.State build(CharSequence[] input) {
-		final LocalStringUnionOperations builder = new LocalStringUnionOperations(); 
-
-		for (CharSequence chs : input)
-			builder.add(chs);
-
-		return convert(builder.complete(), new IdentityHashMap<State, dk.brics.automaton.State>());
-	}
+//	/**
+//	 * Build a minimal, deterministic automaton from a sorted list of strings.
+//	 */
+//	public static SDFA build(CharSequence[] strings, WordType[] types) {
+//		final WordUnionOperations builder = new WordUnionOperations(); 
+//		if (strings.length == 0)
+//            return ;
+//        Arrays.sort(strings, LEXICOGRAPHIC_ORDER);
+//		for (CharSequence chs : input)
+//			builder.add(chs);
+//
+//		return convert(builder.complete(), new IdentityHashMap<State, dk.brics.automaton.State>());
+//	}
 
 	/**
 	 * Copy <code>current</code> into an internal buffer.
@@ -360,11 +380,11 @@ final public class LocalStringUnionOperations {
 	 * Add a suffix of <code>current</code> starting at <code>fromIndex</code>
 	 * (inclusive) to state <code>state</code>.
 	 */
-	private void addSuffix(State state, CharSequence current, int fromIndex) {
+	private void addSuffix(State state, CharSequence current, int fromIndex, WordType type) {
 		final int len = current.length();
 		for (int i = fromIndex; i < len; i++) {
 			state = state.newState(current.charAt(i));
 		}
-		state.is_final = true;
+		state.type = type;
 	}
 }

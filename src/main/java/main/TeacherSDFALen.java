@@ -27,8 +27,8 @@ public class TeacherSDFALen extends TeacherAbstract<SDFA> {
 	Automaton dataPos ;
 	Automaton dataNeg ;
 	
-	public int numPos;
-	public int numNeg;
+	public long numPos;
+	public long numNeg;
 
     public TeacherSDFALen(Options options, Alphabet alphabet
     		, int numColors, int length) {

@@ -12,6 +12,7 @@ import java.util.List;
 import dk.brics.automaton.Automaton;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import roll.automata.DFA;
 import roll.automata.SDFA;
 import roll.automata.StateNFA;
 import roll.query.Query;
@@ -231,28 +232,49 @@ public class UtilSDFA {
     
     // file format
     // Ln1: #States #Letters
-    // Ln2: State letter State
+    // Ln2: t State letter State
     // Ln.: a State
     // Ln.: r state
     public static void outputSDFA(SDFA sdfa, String fileName) 
     		throws FileNotFoundException {
     	PrintWriter writer = new PrintWriter(fileName);
         writer.println(sdfa.getStateSize() + " " + sdfa.getAlphabetSize());
-        writer.println(sdfa.getInitialState());
-        for (int s = 0; s < sdfa.getStateSize(); s ++) {
-        	for (int letter = 0; letter < sdfa.getAlphabetSize(); letter++) {
-        		int succ = sdfa.getState(s).getSuccessor(letter);
-        		if (succ != -1) writer.println("t " + s + " " + letter + " " + succ);
+        outputInit(sdfa, writer, 0);
+        outputTrans(sdfa, writer, 0);
+        outputAcc(sdfa.getFinalStates(), true, writer, 0);
+        outputAcc(sdfa.getRejectStates(), false, writer, 0);
+        writer.close();
+    }
+    
+    private static void outputTrans(DFA aut, PrintWriter writer, int base) {
+    	for (int s = 0; s < aut.getStateSize(); s ++) {
+        	for (int letter = 0; letter < aut.getAlphabetSize(); letter++) {
+        		int succ = aut.getState(s).getSuccessor(letter);
+        		if (succ != -1) writer.println("t " + (s + base) + " " + letter + " " + (succ + base));
         	}
         }
-//        ISet finalStates = sdfa.getFinalStates();
-        for (int s : sdfa.getFinalStates()) {
-        	writer.println("a " + s);
-        }
-//        ISet rejectStates = sdfa.getRejectStates();
-        for (int s : sdfa.getRejectStates()) {
-        	writer.println("r " + s);
-        }
+    }
+    private static void outputInit(DFA aut, PrintWriter writer, int base) {
+        writer.println("i " + (aut.getInitialState() + base));
+    }
+    
+    private static void outputAcc(ISet states, boolean acc, PrintWriter writer, int base) {
+    	 for (int s : states) {
+         	writer.println((acc ? "a" : "r") + " " + (s + base));
+         }
+    }
+    
+    public static void outputSDFA(DFA pos, DFA neg, String fileName) 
+    		throws FileNotFoundException {
+    	int base = pos.getStateSize();
+    	PrintWriter writer = new PrintWriter(fileName);
+        writer.println(pos.getStateSize() + neg.getStateSize() + " " + pos.getAlphabetSize());
+        outputInit(pos, writer, 0);
+        outputInit(pos, writer, base);
+        outputTrans(pos, writer, 0);
+        outputTrans(neg, writer, base);
+        outputAcc(pos.getFinalStates(), true, writer, 0);
+        outputAcc(neg.getFinalStates(), false, writer, base);
         writer.close();
     }
     
@@ -361,15 +383,15 @@ public class UtilSDFA {
     }
     
     public static HashableValue decideMembership(Word word, int numColors) {
-    	Pair[] positions = new Pair[numColors];
+    	IntPair[] positions = new IntPair[numColors];
     	for (int i = 0; i < numColors; i ++) {
-    		positions[i] = new Pair(-1, -1);
+    		positions[i] = new IntPair(-1, -1);
     	}
        
         int mask = 0;
         for (int i = 0; i < word.length(); i ++) {
         	int color = word.getLetter(i);
-            Pair pair = positions[color];
+            IntPair pair = positions[color];
             boolean hasLoop = false;
             if (pair.left == -1)
                 positions[color].left = i;

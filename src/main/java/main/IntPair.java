@@ -1,17 +1,17 @@
 package main;
 
-public class Pair {
+public class IntPair {
 	
 	public int left;
 	public int right;
 	
-	Pair(int lft, int rgt) {
+	IntPair(int lft, int rgt) {
 		this.left = lft;
 		this.right = rgt;
 	}
 	
-	public Pair copy() {
-		return new Pair(left, right);
+	public IntPair copy() {
+		return new IntPair(left, right);
 	}
 	
 	@Override

@@ -19,11 +19,11 @@ public class DataEnumerator {
 	Alphabet alphabet;
 	
 	// main data structures
-	LinkedList<Pair[]> positionsStack;
+	LinkedList<IntPair[]> positionsStack;
 	int currIdx;
 	int[] masks;
 	int[] currColor;
-	Pair[] defaultPositions;
+	IntPair[] defaultPositions;
 	int[] word;
 	
 	boolean isEven;
@@ -37,7 +37,7 @@ public class DataEnumerator {
 	public DataEnumerator(int numColors, int length) {
 		this.numColors = numColors;
 		this.length = length;
-		this.positionsStack = new LinkedList<Pair[]>();
+		this.positionsStack = new LinkedList<IntPair[]>();
 		this.alphabet = new Alphabet();
 		for (int i = 0; i < numColors; i ++) {
 			this.alphabet.addLetter((char)i);
@@ -52,8 +52,8 @@ public class DataEnumerator {
 		Arrays.fill(masks, 0);
 		
 		currIdx = 0;
-		defaultPositions = new Pair[numColors];
-		Arrays.fill(defaultPositions, new Pair(-1, -1));
+		defaultPositions = new IntPair[numColors];
+		Arrays.fill(defaultPositions, new IntPair(-1, -1));
 		
 		word = new int[length];
 		this.numPos = 0;
@@ -84,7 +84,7 @@ public class DataEnumerator {
 				word[currIdx] = currColor[currIdx];
 				// add a letter and check whether the current
 				// prefix has both even and odd loops
-				Pair[] currPos = positionsStack.isEmpty() ? 
+				IntPair[] currPos = positionsStack.isEmpty() ? 
 						defaultPositions
 					: positionsStack.getLast();
 				int currMask = this.addLetter(currColor[currIdx], currIdx, currPos, word);
@@ -190,15 +190,15 @@ public class DataEnumerator {
         }
     }
 	
-	private int addLetter(int color, int index, final Pair[] positions, int[]word) {
+	private int addLetter(int color, int index, final IntPair[] positions, int[]word) {
 		
-		Pair[] currPos = new Pair[this.numColors];
+		IntPair[] currPos = new IntPair[this.numColors];
 		for (int i = 0; i < this.numColors; i ++) {
 			currPos[i] = positions[i].copy();
 		}
 		
 		// new loop
-		Pair pair = currPos[color];
+		IntPair pair = currPos[color];
         boolean hasLoop = false;
         if (pair.left == -1)
         	currPos[color].left = index;

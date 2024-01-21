@@ -13,13 +13,13 @@ public class DataGen {
 	
 	int numColors;
 	int length;
-	LinkedList<Pair[]> positionsStack;
+	LinkedList<IntPair[]> positionsStack;
 	Alphabet alphabet;
 	
 	public DataGen(int numColors, int length) {
 		this.numColors = numColors;
 		this.length = length;
-		this.positionsStack = new LinkedList<Pair[]>();
+		this.positionsStack = new LinkedList<IntPair[]>();
 		this.alphabet = new Alphabet();
 		for (int i = 0; i < numColors; i ++) {
 			this.alphabet.addLetter((char)i);
@@ -36,8 +36,8 @@ public class DataGen {
 		// need to generate the word
 		int[] masks = new int[length];
 		Arrays.fill(masks, 0);
-		Pair[] defaultPositions = new Pair[numColors];
-		Arrays.fill(defaultPositions, new Pair(-1, -1));
+		IntPair[] defaultPositions = new IntPair[numColors];
+		Arrays.fill(defaultPositions, new IntPair(-1, -1));
 		LinkedList<Word> pos = new LinkedList<>();
 		LinkedList<Word> neg = new LinkedList<>();
 		int numPos = 0;
@@ -54,7 +54,7 @@ public class DataGen {
 				word[currIdx] = currColor[currIdx];
 				// add a letter and check whether the current 
 				// prefix has both even and odd loops
-				Pair[] currPos = positionsStack.isEmpty() ?
+				IntPair[] currPos = positionsStack.isEmpty() ?
 						defaultPositions : positionsStack.getLast();
 				int currMask = this.addLetter(currColor[currIdx]
 						, currIdx, currPos, word);
@@ -162,15 +162,15 @@ public class DataGen {
         }
     }
 	
-	private int addLetter(int color, int index, final Pair[] positions, int[]word) {
+	private int addLetter(int color, int index, final IntPair[] positions, int[]word) {
 		
-		Pair[] currPos = new Pair[this.numColors];
+		IntPair[] currPos = new IntPair[this.numColors];
 		for (int i = 0; i < this.numColors; i ++) {
 			currPos[i] = positions[i].copy();
 		}
 		
 		// new loop
-		Pair pair = currPos[color];
+		IntPair pair = currPos[color];
         boolean hasLoop = false;
         if (pair.left == -1)
         	currPos[color].left = index;

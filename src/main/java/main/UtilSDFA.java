@@ -438,7 +438,7 @@ public class UtilSDFA {
 		return cexStr;
 	}
 
-	public static Pair<Automaton, Automaton> readSDFAFile(
+	public static Pair<DFA, DFA> readSDFAFile(
     		String inputFileName) throws IOException {
 				int firstInit = -1;
 				int secondInit = -1;
@@ -504,14 +504,9 @@ public class UtilSDFA {
 //				System.out.println("i1: " + firstInit + " i2: " + secondInit);
 				sdfa.setInitial(firstInit);
 				DFA pos = sdfa.getDFA(true);
-				Automaton dkPos = DFAOperations.toDkDFA(pos);
-				dkPos.reduce();
-				System.out.println("Positive DFA: " + dkPos.getStates().size());
 				sdfa.setInitial(secondInit);
 				DFA neg = sdfa.getDFA(false);
-				Automaton dkNeg = DFAOperations.toDkDFA(neg);
-				System.out.println("Negative DFA: " + dkNeg.getStates().size());
-				return new roll.util.Pair<>(dkPos, dkNeg);
+				return new roll.util.Pair<>(pos, neg);
 				}catch (IOException o) {
 					System.err.println(o.fillInStackTrace());
 				}finally {

@@ -15,6 +15,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import roll.automata.DFA;
 import roll.automata.SDFA;
 import roll.automata.StateNFA;
+import roll.automata.operations.DFAOperations;
 import roll.query.Query;
 import roll.query.QuerySimple;
 import roll.table.HashableValue;
@@ -24,6 +25,8 @@ import roll.util.sets.ISet;
 import roll.util.sets.UtilISet;
 import roll.words.Alphabet;
 import roll.words.Word;
+import roll.util.Pair;
+
 
 public class UtilSDFA {
 	
@@ -270,7 +273,7 @@ public class UtilSDFA {
     	PrintWriter writer = new PrintWriter(fileName);
         writer.println(pos.getStateSize() + neg.getStateSize() + " " + pos.getAlphabetSize());
         outputInit(pos, writer, 0);
-        outputInit(pos, writer, base);
+        outputInit(neg, writer, base);
         outputTrans(pos, writer, 0);
         outputTrans(neg, writer, base);
         outputAcc(pos.getFinalStates(), true, writer, 0);
@@ -434,5 +437,87 @@ public class UtilSDFA {
 		cexStr = inter.getShortestExample(true);
 		return cexStr;
 	}
+
+	public static Pair<Automaton, Automaton> readSDFAFile(
+    		String inputFileName) throws IOException {
+				int firstInit = -1;
+				int secondInit = -1;
+				BufferedReader br = new BufferedReader(new FileReader(inputFileName));
+		
+				try {
+					String line = br.readLine();
+					ArrayList<String> splitStr = splitList(line, 0);
+	//		    ArrayList<String> splitStr = splitList(line);
+				System.out.println("Start reading samples: " + splitStr.get(0));
+	//		    System.out.println(splitStr.get(1));
+				int numStates = Integer.parseInt(splitStr.get(0));
+				int numLetters = Integer.parseInt(splitStr.get(1));
+				Alphabet alphabet = new Alphabet();
+				for (int i = 0; i < numLetters; i ++) {
+	//		    	alphabet.addLetter((char)(48+i));
+					// the index is also the character value
+					alphabet.addLetter((char)i);
+				}
+				SDFA sdfa = new SDFA(alphabet);
+				System.out.println("#states: " + numStates);
+				System.out.println("#letters: " + numLetters);
+
+				for (int s = 0; s < numStates; s ++) {
+					sdfa.createState();
+				}
+				// now we read other lines
+				while ((line = br.readLine()) != null) {
+					//membership, length, ....
+					 int blankNr = line.indexOf(' ');
+					 if (blankNr == -1) {
+						 // this means the line is empty
+						 continue;
+					 }
+					 splitStr = splitList(line, 0);
+//					 System.out.println("#s: " + splitStr);
+//					 System.out.println(line);
+					 if (splitStr.get(0).equals("i")) {
+//						 System.out.println("i: " + splitStr.get(1));
+						if (firstInit == -1) {
+							firstInit = Integer.parseInt(splitStr.get(1));
+						}else if (secondInit == -1) {
+							secondInit = Integer.parseInt(splitStr.get(1));
+						}
+					 }else if (splitStr.get(0).equals("t")) {
+//						 System.out.println("t: " + splitStr.get(1) + " " + splitStr.get(2)
+//						 + " " + splitStr.get(3));
+						int src = Integer.parseInt(splitStr.get(1));
+						int letter = Integer.parseInt(splitStr.get(2));
+						int dst = Integer.parseInt(splitStr.get(3));
+						sdfa.getState(src).addTransition(letter, dst);
+					 }else if (splitStr.get(0).equals( "a")) {
+//						 System.out.println("a: " + splitStr.get(1));
+						sdfa.setFinal(Integer.parseInt(splitStr.get(1)));
+					 }else if (splitStr.get(0).equals( "r")) {
+//						 System.out.println("r: " + splitStr.get(1));
+						sdfa.setReject(Integer.parseInt(splitStr.get(1)));
+					 }
+				}
+				if (secondInit == -1) {
+					secondInit = firstInit;
+				}
+//				System.out.println("i1: " + firstInit + " i2: " + secondInit);
+				sdfa.setInitial(firstInit);
+				DFA pos = sdfa.getDFA(true);
+				Automaton dkPos = DFAOperations.toDkDFA(pos);
+				dkPos.reduce();
+				System.out.println("Positive DFA: " + dkPos.getStates().size());
+				sdfa.setInitial(secondInit);
+				DFA neg = sdfa.getDFA(false);
+				Automaton dkNeg = DFAOperations.toDkDFA(neg);
+				System.out.println("Negative DFA: " + dkNeg.getStates().size());
+				return new roll.util.Pair<>(dkPos, dkNeg);
+				}catch (IOException o) {
+					System.err.println(o.fillInStackTrace());
+				}finally {
+					br.close();
+				}
+				return null;
+			}
 
 }
